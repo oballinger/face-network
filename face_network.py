@@ -9,14 +9,14 @@ import numpy as np
 import pandas as pd
 import face_recognition
 from pathlib import Path
-from joblib import Parallel, delayed
-
 from omegaconf import OmegaConf
+from joblib import Parallel, delayed
 from tensorflow.keras import applications
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.utils import get_file
 from tensorflow.keras.optimizers import SGD, Adam
+import warnings
 
 def get_model(cfg):
     base_model = getattr(applications, cfg.model.model_name)(
@@ -29,7 +29,6 @@ def get_model(cfg):
     pred_age = Dense(units=101, activation="softmax", name="pred_age")(features)
     model = Model(inputs=base_model.input, outputs=[pred_gender, pred_age])
     return model
-
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -49,40 +48,36 @@ model = get_model(cfg)
 model.load_weights(weight_file)
 detector = dlib.get_frontal_face_detector()
 
-
 def overwrite(dir):
     if os.path.exists(dir):
         shutil.rmtree(dir)
     os.mkdir(dir)
 
 
-def extract_faces(source_dir, age_gender=False, exif=False):
+def extract(source_dir, age_gender=False, exif=False):
 
-    global output_dir, network_dir, face_dir
+    global output_dir, network_dir, face_dir, detector
     output_dir=os.path.join(Path(source_dir), "Face Network/")
-    network_dir=os.path.join(output_dir, "Network Data/")
+    network_dir=os.path.join(output_dir, "Data/")
     face_dir=os.path.join(output_dir, "Faces/")
 
     overwrite(output_dir)
     overwrite(network_dir)
     overwrite(face_dir)
 
-
     img_list=makelist('.jpg', source_dir=source_dir)
     all_images=pd.DataFrame()
 
     count=len(img_list)
-
     print("Analyzing {} images".format(count))
+
     cpus=joblib.cpu_count()-1
     rows=Parallel(n_jobs=cpus)(delayed(crop_face)(a,face_dir,age_gender) for a in img_list)
+    all_images=pd.concat(rows)
 
-    for row in rows:
-        all_images=all_images.append(row, sort=True, ignore_index=True)
+    all_images.to_hdf(network_dir+'FaceDatabase.h5', 'index', 'w',complevel=9)    
 
-    all_images.to_csv(network_dir+'FaceDatabase.csv', index=None)
     print("Face images stored in:", network_dir)
-    print("Facial encodings stored in: ", network_dir+'FaceDatabase.csv')
 
     return all_images
 
@@ -170,8 +165,10 @@ def crop_face(image_path, face_dir, age_gender=False, exif=False):
         return rows
 
 
-# To assess the quality of the clusters, this function calculates the cosine distance between facial encodings within the same cluster.
 def match(row, results, core=False):
+
+    # To assess the quality of the clusters, this function calculates the cosine distance between facial encodings within the same cluster.
+
     if row['cluster']>=0:
 
         #get the facial encoding and cluster ID of the reference face
@@ -199,7 +196,7 @@ def match(row, results, core=False):
 
 
 
-def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distance=50):
+def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distance=50, mosaic=True):
     '''
     This function uses a density-based clustering algorithm (DBSCAN) to identify clusters of similar faces in the list of facial encodings.
     Starting with loose clustering parameters, the function iteratively increases the number of minimum samples and decreases the neighborhood distance parameter.
@@ -214,6 +211,14 @@ def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distanc
     from sklearn.cluster import OPTICS
     from sklearn.cluster import AgglomerativeClustering
 
+    global network_dir, face_db, cluster_dir, output_dir
+
+    output_dir=os.path.join(source_dir, "Face Network/")
+    network_dir=os.path.join(output_dir, "Data/")
+    face_db=pd.read_hdf(network_dir+"FaceDatabase.h5")
+    cluster_dir=os.path.join(output_dir, "Clusters/")
+    face_dir=os.path.join(output_dir, "Faces/")
+
     # Create empty df to store results
     final_results=pd.DataFrame()
     
@@ -223,9 +228,9 @@ def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distanc
 
         print('Iteration {}, Algorithm:{}, EPS: {}'.format(i,algorithm,initial_eps))
         
-        encodings=list(dfe['encoding'])
-        face_names=list(dfe['face_name'])
-        img_names=list(dfe['img_name'])
+        encodings=list(face_db['encoding'])
+        face_names=list(face_db['face_name'])
+        img_names=list(face_db['img_name'])
 
 
         if algorithm=='OPTICS':
@@ -237,7 +242,7 @@ def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distanc
 
             # Decrease EPS by 0.01 each iteration 
             eps=initial_eps-(i/100)
-            clt = DBSCAN(eps=eps, min_samples=3, n_jobs=-1, metric='euclidean')
+            clt = DBSCAN(eps=eps, min_samples=3, n_jobs=-1, metric='euclidean', algorithm='kd_tree')
             clt.fit(encodings)
 
         if algorithm=='AHC':
@@ -282,10 +287,10 @@ def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distanc
         outliers=results.groupby('cluster')[['cluster_distance_core']].agg({'cluster_distance_core':'median'}).reset_index().rename(columns={'cluster_distance_core':'cluster_distance_mean'})
         results=results.merge(outliers, how='left',on='cluster')
 
-        # Assign clusters with a high average cosine distance and those in the bin clusters (-1, -2) to dfe for reanalysis
+        # Assign clusters with a high average cosine distance and those in the bin clusters (-1, -2) to face_db for reanalysis
         
         # Add faces in clusters with low average cosine distance (<40) to final output
-        dfe=results[(results['cluster_distance_mean']>max_distance) | (results['cluster']<0)]
+        face_db=results[(results['cluster_distance_mean']>max_distance) | (results['cluster']<0)]
         results=results[(results['cluster_distance_mean']<=max_distance) & (results['cluster']>=0)]
 
         # Count the number of images in each cluster
@@ -297,7 +302,7 @@ def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distanc
         final_results=final_results.append(results)
 
         print("Matched: ", len(final_results),"(+{})".format(len(results)))
-        print("Unmatched: ", len(dfe))
+        print("Unmatched: ", len(face_db))
 
         #exit=True
         # When no new matches are found, switch to a more flexible clustering algorithm for the final pass.
@@ -309,82 +314,67 @@ def cluster(dfe, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distanc
         #if (len(results) ==0 or i==iterations-1):
         #    algorithm='OPTICS'
 
-        if (len(results) ==0 or len(dfe)==0):
+        if (len(results) ==0 or len(face_db)==0):
             exit=True
 
         if exit:
             break
 
-    dfe['cluster']=-2
-    final_results=final_results.append(dfe).sort_values(by='count',ascending=False)
-
-    
+    face_db['cluster']=-2
+    final_results=final_results.append(face_db).sort_values(by='count',ascending=False)
     from sklearn import preprocessing
     le=preprocessing.LabelEncoder()
     le.fit(final_results['cluster'])
     final_results['cluster']=le.transform(final_results['cluster'])
+
+    final_results.reset_index(inplace=False)
+    final_results.to_hdf(network_dir+'FaceDatabase.h5', 'index', 'w',complevel=9)    
+
+    if mosaic:
+        # build a mosaic of face tiles for each cluster
+        overwrite(cluster_dir)
+        clusters=final_results['cluster'].unique().tolist()
+        clusters = [ elem for elem in clusters if elem > 0]
+        cpus=joblib.cpu_count()-1
+        rows=Parallel(n_jobs=cpus)(delayed(build_mosaic)(cluster,final_results,face_dir,cluster_dir) for cluster in clusters)
+
+    return final_results
+
+
+
+
+def network(source_dir, scale=10):
     
-    return final_results.reset_index(inplace=False)
-
-
-
-def cluster_faces(df, **kwargs):
-
-    # Clean and convert facial encodings to arrays, drop images with no faces.
-    df['encoding']=df['encoding'].str.replace(']','', regex=False).str.replace('[','', regex=False)
-
-    # Each row contains an image path, and a list of facial encodings appearing in each image. 
-    # Explode the dataset such that each row is a facial encoding. 
-    df['encoding']=df['encoding'].apply(lambda x: np.array([i for i in x.split(' ') if i], dtype=float))
-
-    results=cluster(df, **kwargs)
-
-    results.to_csv(network_dir+'FaceDatabase.csv', index=None)
-
-    return results
-
-
-
-
-def network(source_dir, **kwargs):
     from pyvis.network import Network
 
-
-    global network_dir, face_db, cluster_dir, face_dir, output_dir
+    global network_dir, face_db, face_dir, output_dir
 
     output_dir=os.path.join(source_dir, "Face Network/")
     face_dir=os.path.join(output_dir, "Faces/")
-    network_dir=os.path.join(output_dir, "Network Data/")
-    face_db=pd.read_csv(network_dir+"FaceDatabase.csv")
-    cluster_dir=os.path.join(output_dir, "Clusters/")
-
-    df=cluster_faces(face_db, **kwargs)
-
+    network_dir=os.path.join(output_dir, "Data/")
+    face_db=pd.read_hdf(network_dir+"FaceDatabase.h5")
     
-    overwrite(cluster_dir)
-
-    clusters=df['cluster'].unique().tolist()
-    clusters = [ elem for elem in clusters if elem > 0]
-    cpus=joblib.cpu_count()-1
-    rows=Parallel(n_jobs=cpus)(delayed(mosaic)(cluster,df,face_dir,cluster_dir) for cluster in clusters)
-
  
-    df=df[df['cluster']>0]
-    images=df.groupby('img_name')['cluster'].apply(list).reset_index().rename(columns={'cluster':'connections'})
-    df=pd.merge(df,images,how='left',on='img_name')
+    #discard faces that were not matched into clusters
+    face_db=face_db[face_db['cluster']>0]
 
-    clusters=df.groupby('cluster')['connections'].apply(tuple).reset_index()
+    #group the dataframe by image, creating lists of faces in each image
+    images=face_db.groupby('img_name')['cluster'].apply(list).reset_index().rename(columns={'cluster':'connections'})
+    face_db=pd.merge(face_db,images,how='left',on='img_name')
+
+    #group the dataframe by cluster, creating lists of co-appearances with other clusters
+    clusters=face_db.groupby('cluster')['connections'].apply(tuple).reset_index()
     clusters['connections']=clusters['connections'].apply(lambda x: list([item for sublist in x for item in sublist]))
+    info=face_db.groupby('cluster').first().reset_index().drop(columns=['connections'])
     exp=clusters.explode(column='connections')
-    info=df.groupby('cluster').first().reset_index().drop(columns=['connections'])
-    exp=exp.merge(info, how='left',on='cluster')
+    exp=exp.merge(info, how='left',on='cluster')    
 
-    exp['count']=1
+    exp['edge_count']=1
     exp['edge']=exp.apply(lambda x: tuple([x['cluster'], x['connections']]),axis=1)
     exp['total_connections']=np.where(exp['cluster']!=exp['connections'], 1,0)
 
-    weight=exp.groupby('edge')['count'].count().reset_index().rename(columns={'count':'weight'})
-    size=exp[['cluster','count','total_connections']].groupby('cluster').agg({'count':'count', 'total_connections':'sum'}).reset_index().rename(columns={'count':'size'})
+    weight=exp.groupby('edge')['edge_count'].count().reset_index().rename(columns={'edge_count':'weight'})
+    size=exp[['cluster','edge_count','total_connections']].groupby('cluster').agg({'edge_count':'count', 'total_connections':'sum'}).reset_index().rename(columns={'edge_count':'size'})
 
     exp=exp.drop_duplicates(subset=['edge'], keep='first').drop(columns=['total_connections'])
 
@@ -398,13 +388,12 @@ def network(source_dir, **kwargs):
 
     for index, row in exp.iterrows():
         src=str(row['cluster'])
-        s=np.log10(row['size'])*5
+        s=np.log10(row['size'])*scale
         connections=str(row['total_connections'])+'<br>'
-        count=str(row['count'])+'<br>'
+        image_count=str(int(row['count']))+'<br>'
         path=face_dir+str(row['face_name'])
         
-
-        tag=("Individual ID: "+src+'<br> Connections: '+connections+'Images: '+count)
+        tag=("Individual ID: "+src+'<br> Connections: '+connections+'Images: '+image_count)
 
         net.add_node(src, label=src,size=s, title=tag, shape='circularImage',image=path, borderWidth=4)
 
@@ -424,7 +413,7 @@ def network(source_dir, **kwargs):
     print("Network graph created in: "+network_dir+'Image_Network.html')
     
 
-def mosaic(cluster, df, face_dir, cluster_dir):
+def build_mosaic(cluster, df, face_dir, cluster_dir):
     from imutils import build_montages
 
     image_list=df[df['cluster']==cluster].sort_values(by='cluster_distance_core')['face_name']
@@ -550,7 +539,7 @@ def plot_accuracy(photo_dir, bounds=[0,100], xlabel='', **kwargs):
 
         clustered=network(photo_dir, max_distance=i, **kwargs)
 
-        df=pd.read_csv(photo_dir+'/Face Network/Network Data/FaceDatabase.csv')
+        df=pd.read_hdf(photo_dir+'/Face Network/Data/FaceDatabase.h5')
 
         df['ID']=df['face_name'].str.split('_').str[1:-1]
         df['ID']=['_'.join(map(str, l)) for l in df['ID']]
