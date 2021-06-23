@@ -1,4 +1,22 @@
-## Welcome to GitHub Pages
+### Turn unstructured image data into a social network
+
+Given a large volume of images of people this tool:
+
+1. Extracts faces 
+2. Clusters faces based on similarity 
+3. Creates a social network graph based on co-appearance in images 
+
+The three steps above correspond to the black arrows on the left of the diagram below: 
+
+
+## 1. Extracting faces 
+```markdown
+face_network.extract_faces(source_dir, age_gender=False)
+```
+
+This function extracts all faces from a directory of images using Dlib’s face detector, and must be run prior to further analysis. 
+
+
 
 You can use the [editor on GitHub](https://github.com/oballinger/face-network/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
 
