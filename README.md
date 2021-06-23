@@ -1,5 +1,5 @@
 # face-network
-[Build Status](https://github.com/oballinger/face-network/workflows/CI/badge.svg?branch=master&event=push)
+![example workflow](https://github.com/github/docs/actions/workflows/main.yml/badge.svg)
 Create a social network graph based on coappearance in images. Given a large volume of images of people this tool:
 
 1. Extracts faces 
