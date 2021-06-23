@@ -10,7 +10,7 @@ The three steps above correspond to the black arrows on the left of the diagram 
 
 
 ## 1. Extracting faces 
-```markdown
+```python
 face_network.extract_faces(source_dir, age_gender=False)
 ```
 
