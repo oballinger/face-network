@@ -25,7 +25,7 @@ This function creates a new folder called “Face Network” in your image direc
 ## 2. Clustering Faces 
 
 ```python
-face_network.network(source_dir, algorithm='DBSCAN', iterations=1, initial_eps=0.45, max_distance=45)
+face_network.cluster(source_dir, algorithm='DBSCAN', iterations=1, initial_eps=0.45, max_distance=45)
 ```
 
 Once faces are extracted, similar faces are clustered together. This function uses a density-based clustering algorithm (DBSCAN) to identify clusters of similar faces in the list of facial encodings. Starting with loose clustering parameters, the function iteratively decreases the neighborhood distance parameter. In each iteration, facial similarity within clusters is evaluated. Dense clusters are extracted, and sparse clusters are assigned to be re-evaluated in the next iteration. When an iteration returns no new clusters, the function returns a dataframe containing facial encodings grouped into clusters based on similarity.
