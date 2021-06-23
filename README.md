@@ -40,14 +40,14 @@ Rows in the FaceDatabase.h5 file now contain a unique numeric identifier, groupi
 ## 3. Generating a Network
 
 ```python
-face_network.network(photo_dir, size=10)
+face_network.network(photo_dir, scale=10)
 ```
 
 Having identified individuals across multiple pictures, this function generates a force directed graph based on co-appearance in images. Each individual is a node, and each co-appearance is an edge. 
 
-Output:
+### Output:
 
-A file called “Image_Network.html” is created in “photo_directory/Face Network/Data/”.
+A file called “Image_Network.html” is created in "photo_directory/Face Network/Data/".
 
 ![project structure](./docs/images/image5.png)
 
@@ -58,9 +58,10 @@ The graph can be opened in a web browser and is fully interactive. Hovering over
 # Example Project
 
 Given a folder called “photo_dir” with five images, the following process extracts faces, clusters similar faces, and creates a co-appearance network:
+
 ```python
 import face_network
-photo_dir=”./Downloads/photo_dir”
+photo_dir="Users/oballinger/Downloads/photo_dir"
 
 face_network.extract(photo_dir, age_gender=True)
 
