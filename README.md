@@ -1,4 +1,7 @@
 # face-network
+
+[![Documentation Status](https://readthedocs.org/projects/face-network/badge/?version=latest)](https://face-network.readthedocs.io/en/latest/?badge=latest)
+
 Create a social network graph based on coappearance in images. Given a large volume of images of people this tool:
 
 1. Extracts faces 
