@@ -9,6 +9,10 @@ Welcome to face-network's documentation!
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   
+   pages/extract
+   pages/cluster
+   pages/network
 
 
 
@@ -18,3 +22,6 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
+
