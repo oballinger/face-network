@@ -1,5 +1,5 @@
 opencv-python
-make
+cmake
 dlib
 face_recognition
 numpy
