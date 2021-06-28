@@ -35,7 +35,32 @@
             
   <section id="creating-a-network">
 <h1>Creating a Network<a class="headerlink" href="#creating-a-network" title="Permalink to this headline">¶</a></h1>
-<p>This module creates a force directed graph based on co-appearances in images</p>
+<p>Having identified individuals across multiple pictures, this function generates a force directed graph based on co-appearance in images. Each individual is a node, and each co-appearance is an edge.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">face_network</span><span class="o">.</span><span class="n">network</span><span class="p">(</span><span class="n">photo_dir</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">source_dir</dt>
+<dd class="field-odd"><p>(<em>str</em>) The path to the image folder</p>
+</dd>
+<dt class="field-even">scale</dt>
+<dd class="field-even"><p>(<em>int, default=10</em>) Dictates the size of the nodes</p>
+</dd>
+</dl>
+</section>
+<section id="outputs">
+<h2>Outputs<a class="headerlink" href="#outputs" title="Permalink to this headline">¶</a></h2>
+<p>A file called “Image_Network.html” is created in “photo_directory/Face Network/Data/”.</p>
+<figure class="align-default">
+<img alt="_images/image5.png" src="_images/image5.png" />
+</figure>
+<p>The graph can be opened in a web browser and is fully interactive. Hovering over a node will display a tooltip showing the cluster’s unique identifier. This corresponds to the filenames of the mosaics generated in the previous step:</p>
+<figure class="align-default">
+<img alt="_images/image1.png" src="_images/image1.png" />
+</figure>
+</section>
 </section>
 
 
@@ -59,7 +84,11 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="extract.html">Extracting Faces from Images</a></li>
 <li class="toctree-l1"><a class="reference internal" href="cluster.html">Clustering Similar Faces</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating a Network</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Creating a Network</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#outputs">Outputs</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="lfw.html">Benchmarking using the Labeled Faces in the Wild (LFW) dataset</a></li>
 </ul>
 

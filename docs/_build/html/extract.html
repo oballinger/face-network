@@ -35,26 +35,29 @@
             
   <section id="extracting-faces-from-images">
 <h1>Extracting Faces from Images<a class="headerlink" href="#extracting-faces-from-images" title="Permalink to this headline">¶</a></h1>
+<p>This function extracts all faces from a directory of images using Dlib’s face detector, and must be run prior to further analysis.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">face_network</span><span class="o">.</span><span class="n">extract_faces</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">age_gender</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
 <dl class="field-list simple">
-<dt class="field-odd">param [ParamName]</dt>
-<dd class="field-odd"><p>[ParamDescription], defaults to [DefaultParamVal]</p>
+<dt class="field-odd">source_dir</dt>
+<dd class="field-odd"><p>(<em>str</em>); The path to the image folder (note: this folder can contain sub-directories, so specify the highest level image directory).</p>
 </dd>
-<dt class="field-even">type [ParamName]</dt>
-<dd class="field-even"><p>[ParamType](, optional)</p>
-</dd>
-<dt class="field-odd">raises [ErrorType]</dt>
-<dd class="field-odd"><p>[ErrorDescription]</p>
-</dd>
-<dt class="field-even">return</dt>
-<dd class="field-even"><p>[ReturnDescription]</p>
-</dd>
-<dt class="field-odd">rtype</dt>
-<dd class="field-odd"><p>[ReturnType]</p>
+<dt class="field-even">age_gender</dt>
+<dd class="field-even"><p>(<em>bool, defaul=False</em>); Estimates apparent age and gender using a pretrained Convolutional Neural Network (ResNet-50). Results are stored in the columns “age” and “gender” in the resulting dataframe. Gender is predicted on a scale from 0 (male) to 1 (female).</p>
 </dd>
 </dl>
-<p>This function extracts all faces from a directory of images using Dlib’s face detector, and must be run prior to further analysis.</p>
-<p>### Outputs:</p>
+</section>
+<section id="outputs">
+<h2>Outputs<a class="headerlink" href="#outputs" title="Permalink to this headline">¶</a></h2>
 <p>This function creates a new folder called “Face Network” in your image directory. When a face is identified, it is cropped and stored in a new folder “source_dir/Face Network/Faces/”. Given “Image.jpg” containing two faces, this function will save two cropped faces: “face1_Image.jpg” and “face2_Image.jpg”. Facial encodings (128-dimensional vectors used for clustering and matching similar faces) are stored in a file called “FaceDatabase.h5”.</p>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this headline">¶</a></h2>
+<p>The facial extraction function is threaded, by default using n_cpus-1. Using seven cores on an M1 MacBook Pro, all 14,000 faces were extracted from the <a class="reference external" href="http://vis-www.cs.umass.edu/lfw/">Labeled Faces in the Wild</a> (LFW) database in 42 minutes (~6 faces per second). Facial encodings for the entire LFW database take up 15 MB (~1kb per face).</p>
+</section>
 </section>
 
 
@@ -76,7 +79,12 @@
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Extracting Faces from Images</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Extracting Faces from Images</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#outputs">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance">Performance</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="cluster.html">Clustering Similar Faces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="network.html">Creating a Network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lfw.html">Benchmarking using the Labeled Faces in the Wild (LFW) dataset</a></li>

@@ -35,11 +35,48 @@
             
   <section id="clustering-similar-faces">
 <h1>Clustering Similar Faces<a class="headerlink" href="#clustering-similar-faces" title="Permalink to this headline">¶</a></h1>
-<p>### Outputs:</p>
+<p>Once faces are extracted, similar faces are clustered together. This function uses a density-based clustering algorithm (DBSCAN) to identify clusters of similar faces in the list of facial encodings. Starting with loose clustering parameters, the function iteratively decreases the neighborhood distance parameter. In each iteration, facial similarity within clusters is evaluated. Dense clusters are extracted, and sparse clusters are assigned to be re-evaluated in the next iteration. When an iteration returns no new clusters, the function returns a dataframe containing facial encodings grouped into clusters based on similarity.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">face_network</span><span class="o">.</span><span class="n">network</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;DBSCAN&#39;</span><span class="p">,</span> <span class="n">iterations</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">initial_eps</span><span class="o">=</span><span class="mf">0.45</span><span class="p">,</span> <span class="n">max_distance</span><span class="o">=</span><span class="mi">45</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="parameters">
+<h2>Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
+<dl class="field-list simple">
+<dt class="field-odd">source_dir</dt>
+<dd class="field-odd"><p>(<em>str</em>) The path to the image folder</p>
+</dd>
+<dt class="field-even">algorithm</dt>
+<dd class="field-even"><p>(<em>{‘DBSCAN’,’OPTICS’,’AHC’}, default=”DBSCAN”</em>) The algorithm used for clustering. Possible options are “<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.DBSCAN.html">DBSCAN</a>”, “<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.OPTICS.html">OPTICS</a>”, and “<a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.AgglomerativeClustering.html">AHC</a>” (agglomerative hierarchical clustering).</p>
+</dd>
+<dt class="field-odd">iterations</dt>
+<dd class="field-odd"><p>(<em>int, default=10</em>) The number of iterations that the function will perform. Each iteration restricts the clustering parameters.</p>
+</dd>
+<dt class="field-even">max_distance</dt>
+<dd class="field-even"><p>(<em>float, default=50</em>) Sets the maximum euclidean distance between each face in a cluster and the core sample. This weeds out outliers and sparse clusters.</p>
+</dd>
+<dt class="field-odd">initial_eps</dt>
+<dd class="field-odd"><p>(<em>float, default=0.45</em>) Determines Sets the Epsilon parameter for the DBSCAN algorithm.</p>
+</dd>
+<dt class="field-even">mosaic</dt>
+<dd class="field-even"><p>(<em>bool, default=True</em>) Creates a mosaic of face tiles for each image.</p>
+</dd>
+</dl>
+</section>
+<section id="outputs">
+<h2>Outputs<a class="headerlink" href="#outputs" title="Permalink to this headline">¶</a></h2>
 <p>Rows in the FaceDatabase.h5 file now contain a unique numeric identifier, grouping similar faces into clusters. If the “mosaic” option is enabled, an image composed of all of the face tiles in a given cluster is created:</p>
 <figure class="align-default">
-<img alt="images/image6.png" src="images/image6.png" />
+<img alt="_images/image6.png" src="_images/image6.png" />
 </figure>
+</section>
+<section id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this headline">¶</a></h2>
+<p>The graph below shows the effect of varying the “max_distance” parameter on clustering accuracy in the LFW dataset.</p>
+<figure class="align-default">
+<img alt="_images/image2.png" src="_images/image2.png" />
+</figure>
+<p>The optimal range seems to be between 50 and 60: if the cutoff is too low, false negatives increase as faces are not sorted into clusters. If the cutoff is too high, the number of false positives increases. Optimal parameters will vary based on your dataset. Further information on the clustering evaluation metrics used above can be found <a class="reference external" href="https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html">here</a>.</p>
+</section>
 </section>
 
 
@@ -62,7 +99,12 @@
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="extract.html">Extracting Faces from Images</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Clustering Similar Faces</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Clustering Similar Faces</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#parameters">Parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#outputs">Outputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance">Performance</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="network.html">Creating a Network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lfw.html">Benchmarking using the Labeled Faces in the Wild (LFW) dataset</a></li>
 </ul>
