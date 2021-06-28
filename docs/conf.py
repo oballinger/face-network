@@ -21,7 +21,7 @@ class Mock(MagicMock):
 
 #MOCK_MODULES = ['cv2','json','dlib','shutil','face_recognition','exifread','numpy ','pandas','pathlib','joblib','omegaconf','tensorflow','sklearn','tables']
 
-MOCK_MODULES = ['python-opencv','dlib','cmake','shutil','face_recognition','joblib','exifread','numpy ','pandas']
+MOCK_MODULES = ['cv2','json','dlib','shutil','face_recognition','joblib','exifread','numpy ','pandas']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 sys.path.insert(0, os.path.abspath('..'))
