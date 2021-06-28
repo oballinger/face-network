@@ -35,9 +35,9 @@
             
   <section id="extracting-faces-from-images">
 <h1>Extracting Faces from Images<a class="headerlink" href="#extracting-faces-from-images" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">`python</span>
-<span class="pre">face_network.extract_faces(source_dir,</span> <span class="pre">age_gender=False)</span>
-<span class="pre">`</span></code></p>
+<blockquote>
+<div><p>face_network.extract_faces(source_dir, age_gender=False)</p>
+</div></blockquote>
 <p>This function extracts all faces from a directory of images using Dlib’s face detector, and must be run prior to further analysis.</p>
 <p>### Outputs:</p>
 <p>This function creates a new folder called “Face Network” in your image directory. When a face is identified, it is cropped and stored in a new folder “source_dir/Face Network/Faces/”. Given “Image.jpg” containing two faces, this function will save two cropped faces: “face1_Image.jpg” and “face2_Image.jpg”. Facial encodings (128-dimensional vectors used for clustering and matching similar faces) are stored in a file called “FaceDatabase.h5”.</p>
@@ -66,7 +66,6 @@
 <li class="toctree-l1"><a class="reference internal" href="cluster.html">Clustering Similar Faces</a></li>
 <li class="toctree-l1"><a class="reference internal" href="network.html">Creating a Network</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lfw.html">Benchmarking using the Labeled Faces in the Wild (LFW) dataset</a></li>
-<li class="toctree-l1"><a class="reference internal" href="face_network.html">face_network module</a></li>
 </ul>
 
 <div class="relations">
