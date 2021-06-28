@@ -10,9 +10,11 @@ Welcome to face-network's documentation!
    :maxdepth: 2
    :caption: Contents:
    
-   pages/extract
-   pages/cluster
-   pages/network
+   extract
+   cluster
+   network
+   lfw
+   face_network
 
 
 

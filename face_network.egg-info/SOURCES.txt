@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+api/__init__.py
+api/face_network.py
+face_network.egg-info/PKG-INFO
+face_network.egg-info/SOURCES.txt
+face_network.egg-info/dependency_links.txt
+face_network.egg-info/requires.txt
+face_network.egg-info/top_level.txt
