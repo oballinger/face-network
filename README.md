@@ -11,7 +11,7 @@ Create a social network graph based on coappearance in images. Given a large vol
 
 The three steps above correspond to the black arrows on the left of the diagram below: 
 
-![project structure](https://github.com/oballinger/face-network/blob/main/docs/images/image3.png)
+![project structure](https://raw.githubusercontent.com/oballinger/face-network/main/docs/images/image3.png)
 
 ## 1. Extracting faces 
 
@@ -38,7 +38,7 @@ Once faces are extracted, similar faces are clustered together. This function us
 
 Rows in the FaceDatabase.h5 file now contain a unique numeric identifier, grouping similar faces into clusters. If the “mosaic” option is enabled, an image composed of all of the face tiles in a given cluster is created:
 
-![project structure](https://github.com/oballinger/face-network/blob/main/docs/images/image6.png)
+![project structure](https://raw.githubusercontent.com/oballinger/face-network/main/docs/images/image6.png)
 
 
 ## 3. Generating a Network
@@ -53,11 +53,11 @@ Having identified individuals across multiple pictures, this function generates 
 
 A file called “Image_Network.html” is created in "photo_directory/Face Network/Data/".
 
-![project structure](https://github.com/oballinger/face-network/blob/main/docs/images/image5.png)
+![project structure](https://raw.githubusercontent.com/oballinger/face-network/main/docs/images/image5.png)
 
 The graph can be opened in a web browser and is fully interactive. Hovering over a node will display a tooltip showing the cluster’s unique identifier. This corresponds to the filenames of the mosaics generated in the previous step:
 
-![project structure](https://github.com/oballinger/face-network/blob/main/docs/images/image1.png)
+![project structure](https://raw.githubusercontent.com/oballinger/face-network/main/docs/images/image1.png)
 
 # Example Project
 
@@ -76,5 +76,5 @@ face_network.network(photo_dir, size=20)
 
 The diagram below shows the file structure of the resulting outputs:
 
-![outputs](https://github.com/oballinger/face-network/blob/main/docs/images/image4.png)
+![outputs](https://raw.githubusercontent.com/oballinger/face-network/main/docs/images/image4.png)
 
