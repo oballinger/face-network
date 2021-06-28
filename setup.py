@@ -19,7 +19,7 @@ setup(
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages=find_packages(),
-    install_requires=['opencv-python','dlib','face_recognition','numpy','pandas','pathlib','joblib','omegaconf','sklearn', 'tensorflow', 'cmake'],
+    install_requires=['opencv-python','cmake','dlib','face_recognition','numpy','pandas','pathlib','joblib','omegaconf','sklearn','tensorflow'],
     keywords=['python', 'image', 'network', 'AI', 'neural network'],
     classifiers=[
         "License :: OSI Approved :: MIT License",
