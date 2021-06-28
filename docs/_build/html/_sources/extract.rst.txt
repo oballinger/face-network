@@ -2,8 +2,17 @@
 Extracting Faces from Images
 ============================
 
-
+.. code-block:: python
 	face_network.extract_faces(source_dir, age_gender=False)
+
+
+
+:param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
+:type [ParamName]: [ParamType](, optional)
+
+:raises [ErrorType]: [ErrorDescription]
+:return: [ReturnDescription]
+:rtype: [ReturnType]
 
 
 This function extracts all faces from a directory of images using Dlib’s face detector, and must be run prior to further analysis.

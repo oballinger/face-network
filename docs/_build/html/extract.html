@@ -35,9 +35,23 @@
             
   <section id="extracting-faces-from-images">
 <h1>Extracting Faces from Images<a class="headerlink" href="#extracting-faces-from-images" title="Permalink to this headline">¶</a></h1>
-<blockquote>
-<div><p>face_network.extract_faces(source_dir, age_gender=False)</p>
-</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">param [ParamName]</dt>
+<dd class="field-odd"><p>[ParamDescription], defaults to [DefaultParamVal]</p>
+</dd>
+<dt class="field-even">type [ParamName]</dt>
+<dd class="field-even"><p>[ParamType](, optional)</p>
+</dd>
+<dt class="field-odd">raises [ErrorType]</dt>
+<dd class="field-odd"><p>[ErrorDescription]</p>
+</dd>
+<dt class="field-even">return</dt>
+<dd class="field-even"><p>[ReturnDescription]</p>
+</dd>
+<dt class="field-odd">rtype</dt>
+<dd class="field-odd"><p>[ReturnType]</p>
+</dd>
+</dl>
 <p>This function extracts all faces from a directory of images using Dlib’s face detector, and must be run prior to further analysis.</p>
 <p>### Outputs:</p>
 <p>This function creates a new folder called “Face Network” in your image directory. When a face is identified, it is cropped and stored in a new folder “source_dir/Face Network/Faces/”. Given “Image.jpg” containing two faces, this function will save two cropped faces: “face1_Image.jpg” and “face2_Image.jpg”. Facial encodings (128-dimensional vectors used for clustering and matching similar faces) are stored in a file called “FaceDatabase.h5”.</p>
