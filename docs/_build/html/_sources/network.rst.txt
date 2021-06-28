@@ -18,10 +18,11 @@ Parameters
 Outputs
 =======
 
-A file called “Image_Network.html” is created in “photo_directory/Face Network/Data/”.
+A file called “Image_Network.html” is created in “photo_directory/Face Network/Data/”.The graph can be opened in a web browser and is fully interactive. Hovering over a node will display a tooltip showing the cluster’s unique identifier. This corresponds to the filenames of the mosaics generated in the previous step.
 
-.. figure::  images/image5.png
 
-The graph can be opened in a web browser and is fully interactive. Hovering over a node will display a tooltip showing the cluster’s unique identifier. This corresponds to the filenames of the mosaics generated in the previous step:
+.. raw:: html
+   :file: images/Image_Network.html
 
-.. figure::  images/image1.png
+
+
