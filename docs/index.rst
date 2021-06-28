@@ -1,28 +1,16 @@
-.. face-network documentation master file, created by
-   sphinx-quickstart on Wed Jun 23 18:11:44 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to face-network's documentation!
+Face-Network Documentation
 ========================================
 
+Given a large volume of images of people, this tool generates a social network graph based on co-occurrence in images. This is accomplished in three steps:
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-   
+   :maxdepth: 1
+
    extract
    cluster
    network
-   lfw
 
+The three steps above correspond to the black arrows on the left of the diagram below: 
 
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-
+.. figure::  images/image3.png
 
