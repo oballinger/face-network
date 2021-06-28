@@ -10,7 +10,7 @@ with codecs.open(os.path.join(here, "README.md"), encoding="utf-8") as fh:
 # Setting up
 setup(
     name="face-network",
-    version='1.0',
+    version='1.0.2',
     author="Ollie Ballinger",
     author_email="ollie.l.ballinger@gmail.com",
     license="MIT",
@@ -19,7 +19,7 @@ setup(
     long_description_content_type="text/markdown",
     long_description=long_description,
     packages=find_packages(),
-    #install_requires=['opencv-python','json','dlib','face_recognition','numpy ','pandas','pathlib','joblib','omegaconf','sklearn', 'tensorflow'],
+    install_requires=['opencv-python','dlib','face_recognition','numpy','pandas','pathlib','joblib','omegaconf','sklearn', 'tensorflow'],
     keywords=['python', 'image', 'network', 'AI', 'neural network'],
     classifiers=[
         "License :: OSI Approved :: MIT License",

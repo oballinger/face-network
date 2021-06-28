@@ -1,17 +1,3 @@
-
-def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distance=50, mosaic=True):
-    x=0
-    """
-    Once faces are extracted, similar faces are clustered together. This function uses a density-based clustering algorithm (DBSCAN) to identify clusters of similar faces in the list of facial encodings. Starting with loose clustering parameters, the function iteratively decreases the neighborhood distance parameter. In each iteration, facial similarity within clusters is evaluated. Dense clusters are extracted, and sparse clusters are assigned to be re-evaluated in the next iteration. When an iteration returns no new clusters, the function returns a dataframe containing facial encodings grouped into clusters based on similarity.
-    
-    :param source_dir: List of face encodings to compare
-    :param algorithm: A face encoding to compare against
-    :return: A numpy ndarray with the distance for each face in the same order as the 'faces' array
-
-    """
-
-    return x
-    
 import os
 import cv2
 import json
@@ -31,7 +17,6 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.utils import get_file
 from tensorflow.keras.optimizers import SGD, Adam
 import warnings
-import unittest
 
 
 def get_model(cfg):
