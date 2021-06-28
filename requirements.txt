@@ -1,0 +1,10 @@
+opencv-python
+dlib
+face_recognition
+numpy
+pandas
+pathlib
+joblib
+omegaconf
+sklearn
+tensorflow
