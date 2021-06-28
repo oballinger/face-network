@@ -1,6 +1,7 @@
 # face-network
 
 [![Documentation Status](https://readthedocs.org/projects/face-network/badge/?version=latest)](https://face-network.readthedocs.io/en/latest/?badge=latest)
+[![PyPI version](https://badge.fury.io/py/face-network.svg)](https://badge.fury.io/py/face-network)
 
 Create a social network graph based on coappearance in images. Given a large volume of images of people this tool:
 
