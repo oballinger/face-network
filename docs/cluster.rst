@@ -30,12 +30,17 @@ Rows in the FaceDatabase.h5 file now contain a unique numeric identifier, groupi
 Performance
 ===========
 
-The graph below shows the effect of varying the “max_distance” parameter on clustering accuracy in the LFW dataset. 
+The graph below shows the effect of tuning the “max_distance” parameter on clustering accuracy in the LFW dataset, using the DBSCAN algorithm. 
 
 .. figure::  images/image2.png
 
 The optimal range seems to be between 50 and 60: if the cutoff is too low, false negatives increase as faces are not sorted into clusters. If the cutoff is too high, the number of false positives increases. Optimal parameters will vary based on your dataset. Further information on the clustering evaluation metrics used above can be found `here`_. 
 
+A visual representation of the clustering process is shown in the dendrogram below, generated using Agglomerative Hierarchical Clustering (AHC). Each "leaf node" (the points where the dendrogram intersects the X axis) represents a face. The Y axis indicates the euclidean distance (similarity) between facial encodings. If the link between two leaf nodes is very low, the facial encodings are more similar. An interesting property of using AHC to cluster facial images is that the first branch of the dendrogram almost always separates men and women. 
+
+.. figure::  images/image7.png
+
+The example above uses 100 labeled faces, with colors denoting images of the same individual. We can see groups of faces that are all quite similar to eachother, but quite dissimilar from faces in the other groups. We could probably tell without relying on the colors that there are 5-6 distinct individuals in these 100 images. Indeed, the colors suggest there are 5 main individuals and one "bin" cluster on the far right composed mainly of unlabeled faces (the grey leaf nodes). There are some errant faces from two of the five individuals in this cluster, likely due to poor image quality, pose, or lighting. 94 out of the 100 faces above are labeled. Of these, 86 (91%) were correctly sorted into clusters representing distinct individuals using the red cutoff line. 
 
 .. _`here`: https://nlp.stanford.edu/IR-book/html/htmledition/evaluation-of-clustering-1.html
 
