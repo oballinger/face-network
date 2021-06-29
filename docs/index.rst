@@ -1,7 +1,7 @@
 Face-Network Documentation
 ========================================
 
-Given a large volume of images of people, this tool generates a social network graph based on co-appearance in images. This is accomplished in three steps:
+Given a large volume of images of people, this tool uses artificial intelligence to generate a social network graph based on co-appearance in images. This is accomplished in three steps:
 
 .. toctree::
    :maxdepth: 1
