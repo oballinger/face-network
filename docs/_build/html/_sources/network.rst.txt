@@ -22,7 +22,8 @@ A file called “Image_Network.html” is created in “photo_directory/Face Net
 
 
 .. raw:: html
-   :file: images/Image_Network.html
+   
+   <iframe src="_static/Image_Network.html" scrolling="no" height="600px" width="100%" style="border:1px solid black;"></iframe>
 
 
 
