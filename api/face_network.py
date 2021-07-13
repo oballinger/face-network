@@ -5,21 +5,20 @@ import dlib
 import shutil
 import joblib
 import exifread
+import warnings
 import numpy as np
 import pandas as pd
 import face_recognition
 from pathlib import Path
-from omegaconf import OmegaConf
 from joblib import Parallel, delayed
-from tensorflow.keras import applications
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.utils import get_file
-from tensorflow.keras.optimizers import SGD, Adam
-import warnings
 
 
 def get_model(cfg):
+    from tensorflow.keras import applications
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Dense
+    from tensorflow.keras.optimizers import SGD, Adam
+
     base_model = getattr(applications, cfg.model.model_name)(
         include_top=False,
         input_shape=(cfg.model.img_size, cfg.model.img_size, 3),
@@ -28,25 +27,11 @@ def get_model(cfg):
     features = base_model.output
     pred_gender = Dense(units=2, activation="softmax", name="pred_gender")(features)
     pred_age = Dense(units=101, activation="softmax", name="pred_age")(features)
+    
     model = Model(inputs=base_model.input, outputs=[pred_gender, pred_age])
     return model
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-pretrained_model = "https://github.com/yu4u/age-gender-estimation/releases/download/v0.6/EfficientNetB3_224_weights.11-3.44.hdf5"
-modhash = '6d7f7b7ced093a8b3ef6399163da6ece'
-
-margin = 0.4
-
-weight_file = get_file("EfficientNetB3_224_weights.11-3.44.hdf5", pretrained_model, cache_subdir="pretrained_models",
-                       file_hash=modhash, cache_dir=str(Path(__file__).resolve().parent))
-
-# load model and weights
-model_name, img_size = Path(weight_file).stem.split("_")[:2]
-img_size = int(img_size)
-cfg = OmegaConf.from_dotlist([f"model.model_name={model_name}", f"model.img_size={img_size}"])
-model = get_model(cfg)
-model.load_weights(weight_file)
 detector = dlib.get_frontal_face_detector()
 
 def overwrite(dir):
@@ -56,8 +41,11 @@ def overwrite(dir):
 
 
 def extract(source_dir, age_gender=False, exif=False):
+    from omegaconf import OmegaConf
+    from tensorflow.keras.utils import get_file
 
-    global output_dir, network_dir, face_dir, detector
+
+    global output_dir, network_dir, face_dir, detector, model
     output_dir=os.path.join(Path(source_dir), "Face Network/")
     network_dir=os.path.join(output_dir, "Data/")
     face_dir=os.path.join(output_dir, "Faces/")
@@ -66,6 +54,25 @@ def extract(source_dir, age_gender=False, exif=False):
     overwrite(network_dir)
     overwrite(face_dir)
 
+
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+    pretrained_model = "https://github.com/yu4u/age-gender-estimation/releases/download/v0.6/EfficientNetB3_224_weights.11-3.44.hdf5"
+    modhash = '6d7f7b7ced093a8b3ef6399163da6ece'
+
+    weight_file = get_file("EfficientNetB3_224_weights.11-3.44.hdf5", pretrained_model, cache_subdir="pretrained_models",
+                           file_hash=modhash, cache_dir=str(Path(__file__).resolve().parent))
+    
+    # load model and weights
+    model_name, img_size = Path(weight_file).stem.split("_")[:2]
+    
+    img_size = int(img_size)
+    cfg = OmegaConf.from_dotlist([f"model.model_name={model_name}", f"model.img_size={img_size}"])
+    
+    model = get_model(cfg)
+    model.load_weights(weight_file)
+
+
     img_list=makelist('.jpg', source_dir=source_dir)
     all_images=pd.DataFrame()
 
@@ -73,7 +80,7 @@ def extract(source_dir, age_gender=False, exif=False):
     print("Analyzing {} images".format(count))
 
     cpus=joblib.cpu_count()-1
-    rows=Parallel(n_jobs=cpus)(delayed(crop_face)(a,face_dir,age_gender) for a in img_list)
+    rows=Parallel(n_jobs=cpus)(delayed(crop_face)(a, face_dir, age_gender) for a in img_list)
     all_images=pd.concat(rows)
 
     all_images.to_hdf(network_dir+'FaceDatabase.h5', 'index', 'w',complevel=9)    
@@ -94,8 +101,9 @@ def makelist(extension, source_dir):
     return templist
 
 
-def crop_face(image_path, face_dir, age_gender=False, exif=False):
-    
+def crop_face(image_path, face_dir, model, age_gender=False, exif=False):
+    import face_recognition
+
     img_name=image_path.split('/')[-1]
 
     img = cv2.imread(str(image_path), 1)
@@ -111,14 +119,14 @@ def crop_face(image_path, face_dir, age_gender=False, exif=False):
 
     # detect faces using dlib detector
     detected = detector(input_img, 1)
-    faces = np.empty((len(detected), img_size, img_size, 3))
+    faces = np.empty((len(detected), 224, 224, 3))
 
 
     rows=pd.DataFrame()
 
     if len(detected) > 0:
         for i, d in enumerate(detected):
-
+            margin=0.4
             face_img_name="face{}_{}".format(str(i+1), img_name)
             
             x1, y1, x2, y2, w, h = d.left(), d.top(), d.right() + 1, d.bottom() + 1, d.width(), d.height()
@@ -130,7 +138,7 @@ def crop_face(image_path, face_dir, age_gender=False, exif=False):
             crop_face=img[yw1:yw2 + 1, xw1:xw2 + 1]
             encoding = face_recognition.face_encodings(crop_face)
             
-            faces[i] = cv2.resize(img[yw1:yw2 + 1, xw1:xw2 + 1], (img_size, img_size), interpolation = cv2.INTER_AREA)
+            faces[i] = cv2.resize(img[yw1:yw2 + 1, xw1:xw2 + 1], (224, 224), interpolation = cv2.INTER_AREA)
 
             if len(encoding)==0:
                 break
@@ -196,21 +204,34 @@ def match(row, results, core=False):
     return mean_score
 
 
+def match_stragglers(row, df):
 
-def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distance=50, mosaic=True):
+    #get the facial encoding and cluster ID of the reference face
+    face=row['encoding']
 
-    """
-    Once faces are extracted, similar faces are clustered together. This function uses a density-based clustering algorithm (DBSCAN) to identify clusters of similar faces in the list of facial encodings. Starting with loose clustering parameters, the function iteratively decreases the neighborhood distance parameter. In each iteration, facial similarity within clusters is evaluated. Dense clusters are extracted, and sparse clusters are assigned to be re-evaluated in the next iteration. When an iteration returns no new clusters, the function returns a dataframe containing facial encodings grouped into clusters based on similarity.
-    
-    :param face_encodings: List of face encodings to compare
-    :param face_to_compare: A face encoding to compare against
-    :return: A numpy ndarray with the distance for each face in the same order as the 'faces' array
+    encodings=list(df['encoding'])
 
-    """
+    scores = face_recognition.face_distance(face, encodings)
+    matches = pd.DataFrame({'score':scores,'face_name':df['face_name'],'cluster': df['cluster']})
 
+    top=matches.sort_values(by='score',ascending=True).reset_index(drop=True)
+
+    print(int(top.at[0,'score']*100), row['face_name'], top.at[0,'face_name'])
+
+    return top.at[0,'face_name']
+
+
+
+
+
+def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distance=50, mosaic=True, plot=False):
+        
     from sklearn.cluster import DBSCAN
     from sklearn.cluster import OPTICS
     from sklearn.cluster import AgglomerativeClustering
+    from sklearn import preprocessing
+
+
 
     global network_dir, face_db, cluster_dir, output_dir
 
@@ -219,6 +240,10 @@ def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_
     face_db=pd.read_hdf(network_dir+"FaceDatabase.h5")
     cluster_dir=os.path.join(output_dir, "Clusters/")
     face_dir=os.path.join(output_dir, "Faces/")
+
+    if algorithm=='chinese_whispers':
+        final_results=chinese_whispers(source_dir, threshold=initial_eps, mosaic=mosaic, plot=plot)
+        return final_results
 
     # Create empty df to store results
     final_results=pd.DataFrame()
@@ -256,43 +281,31 @@ def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_
 
             #plot_dendrogram(model, img_names)
 
-
         results=pd.DataFrame({'face_name':face_names, 'img_name':img_names, 'cluster':clt.labels_, 'encoding':encodings})
 
-               
-        def parallel_apply(chunk, df, core=False):
-            if core:
-                chunk['cluster_distance_core']=chunk.apply(lambda x: match(x, df, core=True), axis=1)
-            else:
-                chunk['cluster_distance']=chunk.apply(lambda x: match(x, df), axis=1)
+        #print(len(results['cluster'].unique()), len(face_db['ID'].unique()))
+
+
+        # Add faces in clusters with low average cosine distance (<40) to final output
+        face_db=results[results['cluster']<0]
+        results=results[results['cluster']>=0]
+        
+        #face_db.apply(lambda x: match_stragglers(x, results), axis=1)
+
+        def parallel_apply(chunk, df):
+
+            chunk['top_match']=chunk.apply(lambda x: match_stragglers(x, df), axis=1)
             return chunk
 
         cpus=joblib.cpu_count()-1
-        df_split = np.array_split(results, cpus)
+        df_split = np.array_split(face_db, cpus)
+
 
         rows=Parallel(n_jobs=cpus)(delayed(parallel_apply)(chunk, results) for chunk in df_split)
-        results=pd.concat(rows)
 
-        rows=Parallel(n_jobs=cpus)(delayed(parallel_apply)(chunk, results, core=True) for chunk in df_split)
-        results=pd.concat(rows)
+        #results=pd.concat(rows)
 
 
-        # Small clusters and faces with high cosine distance (bad matches) are assigned to a bin cluster with ID -2
-        results['cluster']=np.where(results['cluster_distance_core']>max_distance+10,-2,results['cluster'])
-        counts=results.groupby('cluster')['face_name'].count().reset_index().rename(columns={'face_name':'count'})
-        results=results.merge(counts, how='left',on='cluster')
-        results['cluster']=np.where(results['count']<5,-2,results['cluster'])
-        results=results.drop(columns='count')
-
-        # Calculate the median cosine distance and percentage of outliers for each cluster. 
-        outliers=results.groupby('cluster')[['cluster_distance_core']].agg({'cluster_distance_core':'median'}).reset_index().rename(columns={'cluster_distance_core':'cluster_distance_mean'})
-        results=results.merge(outliers, how='left',on='cluster')
-
-        # Assign clusters with a high average cosine distance and those in the bin clusters (-1, -2) to face_db for reanalysis
-        
-        # Add faces in clusters with low average cosine distance (<40) to final output
-        face_db=results[(results['cluster_distance_mean']>max_distance) | (results['cluster']<0)]
-        results=results[(results['cluster_distance_mean']<=max_distance) & (results['cluster']>=0)]
 
         # Count the number of images in each cluster
         counts=results.groupby('cluster')['face_name'].count().reset_index().rename(columns={'face_name':'count'})
@@ -323,7 +336,7 @@ def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_
 
     face_db['cluster']=-2
     final_results=final_results.append(face_db).sort_values(by='count',ascending=False)
-    from sklearn import preprocessing
+    
     le=preprocessing.LabelEncoder()
     le.fit(final_results['cluster'])
     final_results['cluster']=le.transform(final_results['cluster'])
@@ -344,9 +357,159 @@ def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_
 
 
 
+def chinese_whispers(source_dir, threshold=0.55, iterations=20, mosaic=True, plot=False):
+    """ Chinese Whispers Algorithm
+    Modified from Alex Loveless' implementation,
+    http://alexloveless.co.uk/data/chinese-whispers-graph-clustering-in-python/
+    Inputs:
+        encoding_list: a list of facial encodings from face_recognition
+        threshold: facial match threshold,default 0.6
+        iterations: since chinese whispers is an iterative algorithm, number of times to iterate
+    Outputs:
+        sorted_clusters: a list of clusters, a cluster being a list of imagepaths,
+            sorted by largest cluster to smallest
+    """
+
+    output_dir=os.path.join(source_dir, "Face Network/")
+    network_dir=os.path.join(output_dir, "Data/")
+    face_db=pd.read_hdf(network_dir+"FaceDatabase.h5")
+    cluster_dir=os.path.join(output_dir, "Clusters/")
+    face_dir=os.path.join(output_dir, "Faces/")
+
+    encodings= list(face_db['encoding'])
+    image_paths=list(face_db['face_name'])
+
+
+    from random import shuffle
+    import networkx as nx
+    # Create graph
+    nodes = []
+    edges = []
+
+    if len(encodings) <= 1:
+        print ("No enough encodings to cluster!")
+        return []
+
+    for idx, face_encoding_to_check in enumerate(encodings):
+        # Adding node of facial encoding
+        node_id = idx+1
+
+        # Initialize 'cluster' to unique value (cluster of itself)
+        node = (node_id, {'cluster': image_paths[idx], 'path': image_paths[idx]})
+        nodes.append(node)
+
+        # Facial encodings to compare
+        if (idx+1) >= len(encodings):
+            # Node is last element, don't create edge
+            break
+
+        compare_encodings = encodings[idx+1:]
+        distances = face_recognition.face_distance(compare_encodings, face_encoding_to_check)
+        encoding_edges = []
+        for i, distance in enumerate(distances):
+            if distance < threshold:
+                # Add edge if facial match
+                edge_id = idx+i+2
+                encoding_edges.append((node_id, edge_id, {'weight': distance}))
+
+        edges = edges + encoding_edges
+
+    G = nx.Graph()
+    G.add_nodes_from(nodes)
+    G.add_edges_from(edges)
+
+    # Iterate
+    for _ in range(0, iterations):
+        cluster_nodes = G.nodes()
+        #shuffle(cluster_nodes)
+        for node in cluster_nodes:
+            neighbors = G[node]
+            clusters = {}
+
+            for ne in neighbors:
+                if isinstance(ne, int):
+                    if G.nodes[ne]['cluster'] in clusters:
+                        clusters[G.nodes[ne]['cluster']] += G[node][ne]['weight']
+                    else:
+                        clusters[G.nodes[ne]['cluster']] = G[node][ne]['weight']
+
+            # find the class with the highest edge weight sum
+            edge_weight_sum = 0
+            max_cluster = 0
+            #use the max sum of neighbor weights class as current node's class
+            for cluster in clusters:
+                if clusters[cluster] > edge_weight_sum:
+                    edge_weight_sum = clusters[cluster]
+                    max_cluster = cluster
+
+            # set the class of target node to the winning local class
+            G.nodes[node]['cluster'] = max_cluster
+
+
+    if plot:
+        print(G.nodes)
+        import matplotlib.pyplot as plt
+        nx.draw(G, node_size=2, edge_color='grey')
+        plt.show()
+
+    clusters = {}
+
+    # Prepare cluster output
+    for (_, data) in G.nodes.items():
+        cluster = data['cluster']
+        path = data['path']
+
+        #print(cluster, path)
+        if cluster:
+            if cluster not in clusters:
+                clusters[cluster] = []
+            clusters[cluster].append(path)
+
+    # Sort cluster output
+    sorted_clusters = sorted(clusters.values(), key=len, reverse=True)
+
+
+    length=[]
+
+    cluster_master=pd.DataFrame()
+    count=0
+    for cluster in sorted_clusters:
+        count+=1
+        cluster_df=pd.DataFrame({'cluster':count,'face_name':cluster})
+        cluster_master=cluster_master.append(cluster_df)
+
+    if 'cluster' in face_db:
+        face_db=face_db.drop(columns=['cluster'])
+
+    if 'count' in face_db:
+        face_db=face_db.drop(columns=['count'])
+
+
+    face_db=face_db.merge(cluster_master, on='face_name',how='left')
+    face_db['cluster']=face_db['cluster'].fillna(-1).astype(int)
+    counts=face_db.groupby('cluster')['face_name'].count().reset_index().rename(columns={'face_name':'count'})
+    face_db=face_db.merge(counts, how='left',on='cluster')
+    print(face_db)
+
+    face_db.to_hdf(network_dir+'FaceDatabase.h5', 'index', 'w',complevel=9)
+
+    if mosaic:
+        # build a mosaic of face tiles for each cluster
+        overwrite(cluster_dir)
+        clusters=face_db['cluster'].unique().tolist()
+        clusters = [ elem for elem in clusters if elem > 0]
+        cpus=joblib.cpu_count()-1
+        rows=Parallel(n_jobs=cpus)(delayed(build_mosaic)(cluster,face_db,face_dir,cluster_dir) for cluster in clusters) 
+
+    return face_db
+
+
+
+
 def network(source_dir, scale=10):
     
     from pyvis.network import Network
+    import networkx as nx
 
     global network_dir, face_db, face_dir, output_dir
 
@@ -382,8 +545,10 @@ def network(source_dir, scale=10):
     exp=pd.merge(exp,weight,on='edge',how='left')
     exp=pd.merge(exp,size,on='cluster',how='left').sort_values(by='total_connections',ascending=False)
 
+    g = nx.Graph()
+
     net = Network(height='100%', width='100%')
-    net.show_buttons()
+    #net.show_buttons()
     #net.barnes_hut(spring_length=200)
     #net.enable_physics(False)
 
@@ -397,7 +562,7 @@ def network(source_dir, scale=10):
         tag=("Individual ID: "+src+'<br> Connections: '+connections+'Images: '+image_count)
 
         net.add_node(src, label=src,size=s, title=tag, shape='circularImage',image=path, borderWidth=4)
-
+        g.add_node(src)
 
     for index, row in exp.iterrows():
         src = str(row['cluster'])
@@ -407,22 +572,101 @@ def network(source_dir, scale=10):
 
         if src !=dst:
             net.add_edge(src, dst, value=w, title=w)
+            g.add_edge(src, dst, weight=w)
 
-    neighbor_map = net.get_adj_list()
-
-    net.show(network_dir+'Image_Network.html')
+    net.save_graph(network_dir+'Image_Network.html')
+    nx.write_gpickle(g, network_dir+'Image_Network.gpickle')
     print("Network graph created in: "+network_dir+'Image_Network.html')
     
+    return g
+    
+
+def network_analysis(network_path):
+    
+    import networkx as nx
+    from functools import reduce
+    import matplotlib.pyplot as plt
+    import math
+
+    g=nx.read_gpickle(network_path)
+    g.remove_nodes_from(list(nx.isolates(g)))
+
+    '''
+    degree_sequence = sorted([d for n, d in graph.degree()], reverse=True) # used for degree distribution and powerlaw test
+    import powerlaw # Power laws are probability distributions with the form:p(x)∝x−α
+    fit = powerlaw.Fit(degree_sequence) 
+    quit()
+    '''
+    k = []
+    Pk = []
+
+
+    for node in list(g.nodes()):
+        degree = g.degree(nbunch=node)
+        try:
+            pos = k.index(degree)
+        except ValueError as e:
+            k.append(degree)
+            Pk.append(1)
+        else:
+            Pk[pos] += 1
+
+    logk = []
+    logPk = []
+
+    # get a double log representation
+    for i in range(len(k)):
+        logk.append(math.log10(k[i]))
+        logPk.append(math.log10(Pk[i]))
+
+    order = np.argsort(logk)
+    logk_array = np.array(logk)[order]
+    logPk_array = np.array(logPk)[order]
+    plt.plot(logk_array, logPk_array, ".")
+    m, c = np.polyfit(logk_array, logPk_array, 1)
+    plt.plot(logk_array, m*logk_array + c, "-")
+    
+
+    plt.show()
+
+    avg_clustering=nx.average_clustering(g, weight='weight')
+    degree_assortativity=nx.degree_assortativity_coefficient(g, weight='weight')
+
+    degree=pd.DataFrame(nx.degree_centrality(g).items()).rename(columns={1:'degree'})
+    eigenvector=pd.DataFrame(nx.eigenvector_centrality(g).items()).rename(columns={1:'eigenvector'})
+    betweenness=pd.DataFrame(nx.betweenness_centrality(g).items()).rename(columns={1:'betweenness'})
+
+    df = reduce(lambda left,right: pd.merge(left,right,on=0), [degree,eigenvector, betweenness])
+
+    size=g.nodes
+    edges=g.edges
+    max_degree=max(df['degree'])
+    LCC_size=len(df)
+
+
+    plt.plot(df['degree'],'.')
+    #plt.plot(df['eigenvector'])
+    #plt.plot(df['betweenness'])
+
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.show()
+
+    #print(df)
+    print("Network Summary Statistics\n", "\nSize: ", len(g.nodes), '\nEdges:', len(g.edges),'\nMax Degree:', max(df['degree']), '\nLargest Connected Component Size:', len(df), "\nAverage Clustering Coefficient:", avg_clustering,'\nGlobal assortativity coefficient by degree:', degree_assortativity, '\nDegree power-law fit exponent:', m)
+
+
 
 def build_mosaic(cluster, df, face_dir, cluster_dir):
     from imutils import build_montages
 
-    image_list=df[df['cluster']==cluster].sort_values(by='cluster_distance_core')['face_name']
+    image_list=df[df['cluster']==cluster]['face_name']#.sort_values(by='cluster_distance_core')
     faces=[]
     for i in image_list:
         image = cv2.imread(face_dir+i)
         faces.append(image)
     dim=int(np.sqrt(len(image_list)))+1
+    print(dim)
     mosaic = build_montages(faces, (500, 500), (dim, dim))[0]
     cv2.imwrite(cluster_dir+str(cluster)+'.jpg', mosaic)
 
@@ -482,7 +726,7 @@ def plot_dendrogram(model, img_names):
     plt.show()
 
 
-def accuracy_assessment(df, ID_var, min_count=5):
+def accuracy_assessment(df, ID_var, min_count=2, confusion_matrix=False):
     from random import random
     from sklearn import metrics
     import matplotlib.pyplot as plt
@@ -499,7 +743,7 @@ def accuracy_assessment(df, ID_var, min_count=5):
     clusters=df.groupby('ID').agg({'cluster':lambda x: x.value_counts().index[0], 'ID_count':'count'}).reset_index().rename(columns={'cluster':'cluster_mode'})
     df=df.drop(columns=['ID_count'])
     df=pd.merge(df,clusters, how='left',on='ID')
-    df=df[df['ID_count']>min_count]
+    df=df[df['count']>min_count]
 
     clusters=df.groupby('cluster').agg({'ID':lambda x: x.value_counts().index[0]}).reset_index().rename(columns={'ID':'ID_mode'})
     df=pd.merge(df,clusters, how='left',on='cluster')
@@ -508,22 +752,34 @@ def accuracy_assessment(df, ID_var, min_count=5):
     from sklearn.metrics import f1_score
 
     matched=(len(df[df['cluster']>0])/len(df))
+    
+    df=df[df['cluster']>5]
+
     nmi=adjusted_mutual_info_score(df['ID'], df['cluster'])
     rand=metrics.adjusted_rand_score(df['ID'], df['cluster'])
     homogeneity=metrics.homogeneity_score(df['ID'], df['cluster'])
+    #f1=metrics.f1_score(df['ID'], df['cluster'])
+    f1=10
+    pd.set_option('display.max_rows', None)
+    df=df.sort_values(by='ID')
 
+    print(df[['cluster','cluster_mode','ID']])
     contingency_matrix = metrics.cluster.contingency_matrix(df['cluster'], df['cluster_mode'])
 
-    #fig = plt.figure()
-    #fig.set_aspect(1)
-    #plt.clf()
-    #res = sn.heatmap(contingency_matrix, vmax=10, cmap='Blues')
+    if confusion_matrix:
+        fig = plt.figure()
+        #fig.set_aspect(1)
+        plt.clf()
+        res = sn.heatmap(contingency_matrix, vmax=10, cmap='Blues')
+        plt.xlabel("Label")
+        plt.ylabel("Predicted Label")
+        plt.show()
 
-    #plt.show()
 
-
-    print("% Matched: {}, NMI: {}, Rand: {}, Homogeneity:{}".format(matched, nmi, rand, homogeneity))
+    print("% Matched: {}\nNMI: {}\nRand: {}\nF1: {}\nHomogeneity:{}\n".format(matched, nmi, rand,f1, homogeneity))
     return rand, nmi, homogeneity
+
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 def plot_accuracy(photo_dir, bounds=[0,100], xlabel='', **kwargs):
@@ -542,8 +798,9 @@ def plot_accuracy(photo_dir, bounds=[0,100], xlabel='', **kwargs):
 
         df=pd.read_hdf(photo_dir+'/Face Network/Data/FaceDatabase.h5')
 
-        df['ID']=df['face_name'].str.split('_').str[1:-1]
-        df['ID']=['_'.join(map(str, l)) for l in df['ID']]
+        df['ID']=df['img_name'].str.split('_').str[0]
+        df=df[df['ID']!='cache']
+        #df['ID']=df.apply(lambda x: unhash(x), axis=1)
 
         metrics=accuracy_assessment(df, df['ID'])
 
@@ -558,9 +815,4 @@ def plot_accuracy(photo_dir, bounds=[0,100], xlabel='', **kwargs):
         plt.legend()
     plt.show()
     return plt
-
-
-
-
-
 
