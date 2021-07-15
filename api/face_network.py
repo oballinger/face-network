@@ -204,34 +204,13 @@ def match(row, results, core=False):
     return mean_score
 
 
-def match_stragglers(row, df):
-
-    #get the facial encoding and cluster ID of the reference face
-    face=row['encoding']
-
-    encodings=list(df['encoding'])
-
-    scores = face_recognition.face_distance(face, encodings)
-    matches = pd.DataFrame({'score':scores,'face_name':df['face_name'],'cluster': df['cluster']})
-
-    top=matches.sort_values(by='score',ascending=True).reset_index(drop=True)
-
-    print(int(top.at[0,'score']*100), row['face_name'], top.at[0,'face_name'])
-
-    return top.at[0,'face_name']
-
-
-
-
 
 def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_distance=50, mosaic=True, plot=False):
-        
+
     from sklearn.cluster import DBSCAN
     from sklearn.cluster import OPTICS
     from sklearn.cluster import AgglomerativeClustering
     from sklearn import preprocessing
-
-
 
     global network_dir, face_db, cluster_dir, output_dir
 
@@ -281,31 +260,43 @@ def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_
 
             #plot_dendrogram(model, img_names)
 
+
         results=pd.DataFrame({'face_name':face_names, 'img_name':img_names, 'cluster':clt.labels_, 'encoding':encodings})
 
-        #print(len(results['cluster'].unique()), len(face_db['ID'].unique()))
-
-
-        # Add faces in clusters with low average cosine distance (<40) to final output
-        face_db=results[results['cluster']<0]
-        results=results[results['cluster']>=0]
-        
-        #face_db.apply(lambda x: match_stragglers(x, results), axis=1)
-
-        def parallel_apply(chunk, df):
-
-            chunk['top_match']=chunk.apply(lambda x: match_stragglers(x, df), axis=1)
+               
+        def parallel_apply(chunk, df, core=False):
+            if core:
+                chunk['cluster_distance_core']=chunk.apply(lambda x: match(x, df, core=True), axis=1)
+            else:
+                chunk['cluster_distance']=chunk.apply(lambda x: match(x, df), axis=1)
             return chunk
 
         cpus=joblib.cpu_count()-1
-        df_split = np.array_split(face_db, cpus)
-
+        df_split = np.array_split(results, cpus)
 
         rows=Parallel(n_jobs=cpus)(delayed(parallel_apply)(chunk, results) for chunk in df_split)
+        results=pd.concat(rows)
 
-        #results=pd.concat(rows)
+        rows=Parallel(n_jobs=cpus)(delayed(parallel_apply)(chunk, results, core=True) for chunk in df_split)
+        results=pd.concat(rows)
 
 
+        # Small clusters and faces with high cosine distance (bad matches) are assigned to a bin cluster with ID -2
+        results['cluster']=np.where(results['cluster_distance_core']>max_distance+10,-2,results['cluster'])
+        counts=results.groupby('cluster')['face_name'].count().reset_index().rename(columns={'face_name':'count'})
+        results=results.merge(counts, how='left',on='cluster')
+        results['cluster']=np.where(results['count']<5,-2,results['cluster'])
+        results=results.drop(columns='count')
+
+        # Calculate the median cosine distance and percentage of outliers for each cluster. 
+        outliers=results.groupby('cluster')[['cluster_distance_core']].agg({'cluster_distance_core':'median'}).reset_index().rename(columns={'cluster_distance_core':'cluster_distance_mean'})
+        results=results.merge(outliers, how='left',on='cluster')
+
+        # Assign clusters with a high average cosine distance and those in the bin clusters (-1, -2) to face_db for reanalysis
+        
+        # Add faces in clusters with low average cosine distance (<40) to final output
+        face_db=results[(results['cluster_distance_mean']>max_distance) | (results['cluster']<0)]
+        results=results[(results['cluster_distance_mean']<=max_distance) & (results['cluster']>=0)]
 
         # Count the number of images in each cluster
         counts=results.groupby('cluster')['face_name'].count().reset_index().rename(columns={'face_name':'count'})
@@ -353,6 +344,8 @@ def cluster(source_dir, algorithm='DBSCAN', initial_eps=0.44, iterations=1, max_
         rows=Parallel(n_jobs=cpus)(delayed(build_mosaic)(cluster,final_results,face_dir,cluster_dir) for cluster in clusters)
 
     return final_results
+
+
 
 
 
