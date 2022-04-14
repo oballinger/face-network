@@ -1,0 +1,17 @@
+opencv-python
+cmake
+dlib
+face_recognition
+numpy
+pandas
+joblib
+omegaconf
+sklearn
+tensorflow
+joblib
+exifread
+pyvis
+imutils
+networkx
+pytables
+pillow
