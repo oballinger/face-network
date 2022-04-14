@@ -13,6 +13,5 @@ exifread
 pyvis
 imutils
 networkx
-scikit-learn
 pytables
 pillow
