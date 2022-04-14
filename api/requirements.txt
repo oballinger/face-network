@@ -1,0 +1,16 @@
+opencv-python
+cmake
+dlib==19.22
+face_recognition
+numpy
+pandas
+joblib
+omegaconf
+sklearn
+tensorflow
+joblib
+exifread
+pyvis
+imutils
+networkx
+pillow
