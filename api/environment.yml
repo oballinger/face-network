@@ -155,8 +155,6 @@ dependencies:
   - libev=4.33
   - libevent=2.1.10
   - libffi=3.4.2
-  - libgfortran=5.0.0.dev0
-  - libgfortran5=11.0.1.dev0
   - libglib=2.70.2
   - libiconv=1.16
   - liblapack=3.9.0
@@ -323,4 +321,6 @@ dependencies:
     - platformdirs==2.5.1
     - virtualenv==20.14.1
     - virtualenv-clone==0.5.7
+    - libgfortran=5.0.0.dev0
+    - libgfortran5=11.0.1.dev0
 prefix: /Users/ollieballinger/miniconda3/envs/fn_env
